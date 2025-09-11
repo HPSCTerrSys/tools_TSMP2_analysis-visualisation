@@ -16,6 +16,7 @@ Outputs:
 import time
 import xarray as xr
 import numpy as np
+import getpass
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from matplotlib.colors import ListedColormap
@@ -249,17 +250,19 @@ def main():
     lon_northpole = -162.0
     lat_northpole = 39.25
 
-#    variable = 'terrain'
-    variable = 'pft'
+    variable = 'terrain'
+#    variable = 'pft'
+    username=getpass.getuser()
+    dirname='/p/project1/training2538/'+username+'/simexp_real_CORDEX-EUR-11u_icon-eclm-parflow/dta/geo/'
 
     if (variable == 'pft'):
        model = 'eclm'
-       dsPnFn = '/p/scratch/cslts/poll1/sim/euro-cordex/wfe_eur-11_icon-eclm-pfl_prod/dta/geo/eclm/static/surfdata_ICON-11_hist_16pfts_Irrig_CMIP6_simyr2000_c230302_gcvurb-pfsoil_halo.nc'
-       gridPnFn = '/p/scratch/cslts/poll1/sim/euro-cordex/wfe_eur-11_icon-eclm-pfl_prod/dta/geo/eclm/static/domain.lnd.ICON-11_ICON-11.230302_landlake_halo.nc'
+       dsPnFn = dirname+'/eclm/static/surfdata_ICON-11_hist_16pfts_Irrig_CMIP6_simyr2000_c230302_gcvurb-pfsoil_halo.nc'
+       gridPnFn = dirname+'/eclm/static/domain.lnd.ICON-11_ICON-11.230302_landlake_halo.nc'
     else:
        model = 'icon'
-       dsPnFn = '/p/scratch/cslts/poll1/sim/euro-cordex/wfe_eur-11_icon-eclm-pfl_prod/dta/geo/icon/static/external_parameter_icon_europe011_DOM01_tiles.nc'
-       gridPnFn = '/p/scratch/cslts/poll1/sim/euro-cordex/wfe_eur-11_icon-eclm-pfl_prod/dta/geo/icon/static/europe011_DOM01.nc'
+       dsPnFn = dirname+'/icon/static/external_parameter_icon_europe011_DOM01_tiles.nc'
+       gridPnFn = dirname+'/icon/static/europe011_DOM01.nc'
     plotFn = f'./map_{model}_{variable}_EUR-12.pdf'
 
     ds, dsGrid = load_datasets(dsPnFn, gridPnFn)
