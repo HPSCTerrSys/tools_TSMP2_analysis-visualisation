@@ -194,20 +194,6 @@ def select_plotting_var(ds, variable, mask):
         
         class_labels = [ "BARE","NETTe","NETBo","NDTBo","BETTr","BETTe","BDTTr","BDTTe","BDTBo",
              "BESTe","BDSTe","BDSBo","AC3Gr","C3Gr","C4Gr","Crp","iCrp","URB","WLD","LKE","GLC"]
-#
-#        # Convert to xarray.DataArray
-#        pct_merged_flat = xr.DataArray(
-#            combined_array,
-#            dims=("gridcell", "class"),
-#            coords={
-#                "gridcell": np.arange(combined_array.shape[0]),
-#                "class": class_labels
-#            },
-#            name="combined_landcover"
-#        )
-#        print(pct_merged_flat)
-#        print(pct_merged_flat.dims)
-#        var = pct_merged_flat
 
         dominant_class = np.argmax(combined_array, axis=1)
         # Convert to xarray.DataArray
@@ -226,6 +212,46 @@ def select_plotting_var(ds, variable, mask):
         values, counts = np.unique(dom_pft.values, return_counts=True)
         freq_dict = {class_labels[v]: c for v, c in zip(values, counts)}
         print(freq_dict)
+
+    if ( variable == 'soiltexture' ):
+       
+        pct_clay = ds["PCT_SAND"]
+        pct_sand = ds["PCT_CLAY"]
+#        frland = ds["PFTDATA_MASK"]
+        frland = 1.-ds["PCT_WETLAND"]/100
+
+        lev_soil = 2
+        pct_clay = pct_clay.values[lev_soil,:]
+        pct_sand = pct_sand.values[lev_soil,:]
+        pct_silt = 1.-pct_clay-pct_sand
+
+        #
+        usda_scs = np.full(frland.shape, np.nan)
+        usda_scs = np.where(( frland >= 0.5) & ( (pct_silt + (1.5*pct_clay)) < 15. ),1, usda_scs)                                                              #  1 - sand
+        usda_scs = np.where(( frland >= 0.5) & ( (pct_silt + (1.5*pct_clay)) >= 15. ) & ( (pct_silt + (2.*pct_clay)) < 30. ), 2, usda_scs)                     #  2 - loamy sand
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 7. ) & ( pct_clay < 20. ) & ( pct_sand > 52. ) & ( (pct_silt + (2.*pct_clay)) >= 30. ), 3, usda_scs) #  3 - sandy loam (1)
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay < 7. ) & ( pct_silt < 50. ) & ( (pct_silt + (2.*pct_clay)) >= 30. ), 3, usda_scs)                    #  3 - sandy loam (2)
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 7. ) & ( pct_clay < 27. ) & ( pct_silt >= 28. ) & ( pct_silt < 50. ) & ( pct_sand <= 52. ),4, usda_scs) #  4 - loam
+        usda_scs = np.where(( frland >= 0.5) & ( pct_silt >= 50. ) & ( pct_clay >= 12. ) & ( pct_clay < 27. ), 5, usda_scs)                                    #  5 - silt loam (1)
+        usda_scs = np.where(( frland >= 0.5) & ( pct_silt >= 50. ) & ( pct_silt < 80. ) & ( pct_clay < 12. ), 5, usda_scs)                                     #  5 - silt loam (2)
+        usda_scs = np.where(( frland >= 0.5) & ( pct_silt >= 80. ) & ( pct_clay < 12. ), 6, usda_scs)                                                          #  6 - silt
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 20. ) & ( pct_clay < 35. ) & ( pct_silt < 28. ) & ( pct_sand > 45. ), 7, usda_scs)                #  7 - sandy clay loam
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 27. ) & ( pct_clay < 40. ) & ( pct_sand > 20. ) & ( pct_sand <= 45. ), 8, usda_scs)               #  8 - clay loam
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 27. ) & ( pct_clay < 40. ) & ( pct_sand <= 20. ), 9, usda_scs)                                    #  9 - silty clay loam
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 35. ) & ( pct_sand > 45. ), 10, usda_scs)                                                         # 10 - sandy clay
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 40. ) & ( pct_silt >= 40. ), 11, usda_scs)                                                        # 11 - silty clay
+        usda_scs = np.where(( frland >= 0.5) & ( pct_clay >= 40. ) & ( pct_sand <= 45. ) & ( pct_silt < 40. ), 12, usda_scs)                                   # 12 - clay
+
+        var = xr.DataArray(
+            usda_scs,
+            dims=("gridcell"),
+            coords={
+                "gridcell": np.arange(usda_scs.shape[0]),
+            },
+            name="soil_texture"
+        )
+        cmap_used = build_colormap_soiltexture()
+
 
     return var, cmap_used
 
@@ -285,7 +311,26 @@ def build_colormap_pftnat():
                        [238/256, 216/256, 174/256, 1], #16
                        [205/256,   0/256,   0/256, 1]])#17
 
-    return ListedColormap(pftcol, name="pftcmp") 
+    return ListedColormap(pftcol, name="pftcmp")
+
+def build_colormap_soiltexture():
+
+    # create colormap soiltexture
+    sltypcol = np.array([   [1.0, 0.92, 0.64, 1],   # 1 Sand        - pale yellow
+                            [0.96, 0.85, 0.50, 1],  # 2 Loamy Sand  - yellowish
+                            [0.91, 0.80, 0.55, 1],  # 3 Sandy Loam  - light yellow-brown
+                            [0.80, 0.60, 0.40, 1],  # 4 Loam        - medium brown
+                            [0.78, 0.75, 0.70, 1],  # 5 Silt Loam   - grayish
+                            [0.82, 0.80, 0.75, 1],  # 6 Silt        - light gray
+                            [0.85, 0.55, 0.40, 1],  # 7 Sandy Clay Loam - reddish brown
+                            [0.80, 0.45, 0.30, 1],  # 8 Clay Loam       - medium reddish
+                            [0.70, 0.60, 0.55, 1],  # 9 Silty Clay Loam - grayish brown
+                            [0.75, 0.45, 0.25, 1],  #10 Sandy Clay      - reddish
+                            [0.60, 0.45, 0.40, 1],  #11 Silty Clay      - dark gray-brown
+                            [0.55, 0.35, 0.25, 1]])   #12 Clay            - dark reddish brown
+
+    return ListedColormap(sltypcol, name="sltypcmp")
+
 
 def build_colormap_terrain(base_cmap="terrain", n_colors=50):
     cmap = plt.get_cmap(base_cmap)
@@ -318,6 +363,8 @@ def plot_map(var, triang, mask, vlon_rot_min, vlon_rot_max, vlat_rot_min, vlat_r
         levelsVals = (np.arange(17+1))
     elif (variable=='pft'):
         levelsVals = (np.arange(21+1))
+    elif (variable=='soiltexture'):
+        levelsVals = np.arange(13)+1
     else:
         levelsVals = (np.arange(51) * 50)
 
@@ -354,6 +401,12 @@ def plot_map(var, triang, mask, vlon_rot_min, vlon_rot_max, vlat_rot_min, vlat_r
         cb = plt.colorbar(pdo, ax=ax1, extend='neither', pad=0.03, shrink=0.8, orientation='horizontal', ticks=tick_positions)
         cb.ax.tick_params(labelsize=8)
         cb.ax.set_xticklabels(tick_labels, rotation=45, ha='right')
+    elif (variable=='soiltexture'):
+        tick_labels = ["sand", "loamy sand", "sandy loam", "loam", "silt loam", "silt", "sandy clay loam", "clay loam", "silty clay loam", "sandy clay", "silty clay", "clay"]
+        tick_positions = (levelsVals[:-1] + levelsVals[1:]) / 2
+        cb = plt.colorbar(pdo, ax=ax1, extend='neither', pad=0.03, shrink=0.8, orientation='horizontal', ticks=tick_positions)
+        cb.ax.tick_params(labelsize=8)
+        cb.ax.set_xticklabels(tick_labels, rotation=45, ha='right')
     else:
         cb = plt.colorbar(pdo, ax=ax1, extend='both', pad=0.03, shrink=0.8, orientation='horizontal', ticks=levelsVals[::10])
         cb.ax.tick_params(labelsize=8)
@@ -376,7 +429,7 @@ def main():
     username=getpass.getuser()
     dirname='/p/project1/training2538/'+username+'/simexp_real_CORDEX-EUR-11u_icon-eclm-parflow/dta/geo/'
 
-    if (variable == 'natpft') or (variable == 'soiltype') or (variable == 'pft'):
+    if (variable == 'natpft') or (variable == 'soiltexture') or (variable == 'pft'):
        model = 'eclm2'
        dsPnFn = dirname+'/eclm/static/surfdata_ICON-11_hist_16pfts_Irrig_CMIP6_simyr2000_c230302_gcvurb-pfsoil_halo.nc'
 #       gridPnFn = dirname+'/eclm/static/domain.lnd.ICON-11_ICON-11.230302_landlake_halo.nc'
