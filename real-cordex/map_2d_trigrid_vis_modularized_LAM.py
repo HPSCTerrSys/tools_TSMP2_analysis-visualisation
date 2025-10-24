@@ -215,15 +215,15 @@ def select_plotting_var(ds, variable, mask):
 
     if ( variable == 'soiltexture' ):
        
-        pct_clay = ds["PCT_SAND"]
-        pct_sand = ds["PCT_CLAY"]
+        pct_clay = ds["PCT_CLAY"]
+        pct_sand = ds["PCT_SAND"]
 #        frland = ds["PFTDATA_MASK"]
         frland = 1.-ds["PCT_WETLAND"]/100
 
         lev_soil = 2
         pct_clay = pct_clay.values[lev_soil,:]
         pct_sand = pct_sand.values[lev_soil,:]
-        pct_silt = 1.-pct_clay-pct_sand
+        pct_silt = 100.-pct_clay-pct_sand
 
         #
         usda_scs = np.full(frland.shape, np.nan)
@@ -251,6 +251,12 @@ def select_plotting_var(ds, variable, mask):
             name="soil_texture"
         )
         cmap_used = build_colormap_soiltexture()
+
+        # check value freq
+        #class_labels = ["sand", "loamy sand", "sandy loam", "loam", "silt loam", "silt", "sandy clay loam", "clay loam", "silty clay loam", "sandy clay", "silty clay", "clay"]
+        values, counts = np.unique(var.values, return_counts=True)
+        freq_dict = {f"{v:.2f}": c for v, c in zip(values, counts)}
+        print(freq_dict)
 
 
     return var, cmap_used
