@@ -409,13 +409,16 @@ def plot_map(var, triang, mask, vlon_rot_min, vlon_rot_max, vlat_rot_min, vlat_r
     plt.xlim(vlon_rot_min, vlon_rot_max)
     plt.ylim(vlat_rot_min, vlat_rot_max)
 
-    if (variable=='pftnat'):
+    if (variable=='terrain'):
+        cb = plt.colorbar(pdo, ax=ax1, extend='both', pad=0.03, shrink=0.8, orientation='horizontal', ticks=levelsVals[::10])
+        cb.ax.tick_params(labelsize=8)
+        cb.set_label('Surface altitude [m]', fontsize=9)
+    elif (variable=='pftnat'):
         tick_labels = ["BARE","NETTe","NETBo","NDTBo","BETTr","BETTe","BDTTr","BDTTe","BDTBo","BESTe","BDSTe","BDSBo","AC3Gr","C3Gr","C4Gr","Crp","URB"]
         tick_positions = (levelsVals[:-1] + levelsVals[1:]) / 2
         cb = plt.colorbar(pdo, ax=ax1, extend='neither', pad=0.03, shrink=0.8, orientation='horizontal', ticks=tick_positions)
         cb.ax.tick_params(labelsize=8)
         cb.ax.set_xticklabels(tick_labels, rotation=45, ha='right')
-#        cb.set_label('', fontsize=9)
     elif (variable=='pft'):
         tick_labels = [ "BARE","NETTe","NETBo","NDTBo","BETTr","BETTe","BDTTr","BDTTe","BDTBo",
              "BESTe","BDSTe","BDSBo","AC3Gr","C3Gr","C4Gr","Crp","iCrp","URB","WLD","LKE","GLC"]
@@ -432,7 +435,8 @@ def plot_map(var, triang, mask, vlon_rot_min, vlon_rot_max, vlat_rot_min, vlat_r
     else:
         cb = plt.colorbar(pdo, ax=ax1, extend='both', pad=0.03, shrink=0.8, orientation='horizontal', ticks=levelsVals[::10])
         cb.ax.tick_params(labelsize=8)
-        cb.set_label('Surface altitude [m]', fontsize=9)
+        labname = var.attrs.get("long_name", "")
+        cb.set_label(labname, fontsize=9)
 
     fig1.savefig(plotFn, bbox_inches='tight', pad_inches=0.1, dpi=2000)
 #    fig1.savefig('./map_output_no_blue.png', bbox_inches='tight', pad_inches=0.1, dpi=2000)
