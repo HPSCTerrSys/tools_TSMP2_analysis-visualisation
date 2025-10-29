@@ -162,7 +162,7 @@ def select_plotting_var(ds, variable, mask):
               )
         cmap_used = build_colormap_terrain()
 
-    if ( variable == 'natpft' ):
+    elif ( variable == 'natpft' ):
         pct_dompft=ds['PCT_NAT_PFT'][:].isel(gridcell=mask).idxmax(dim="natpft",skipna=True).values
 #        var = np.ma.masked_where(
 #               ds['LANDFRAC_PFT'][:].isel(gridcell=mask).values <= 0.5,
@@ -171,7 +171,7 @@ def select_plotting_var(ds, variable, mask):
         var = pct_dompft
         cmap_used = build_colormap_pftnat()
 
-    if ( variable == 'pft' ):
+    elif ( variable == 'pft' ):
 
         pct_nat_pft_cor = ds["PCT_NATVEG"] * ds["PCT_NAT_PFT"] / 100
         pct_cft_cor = ds["PCT_CROP"] * ds["PCT_CFT"] / 100
@@ -213,7 +213,7 @@ def select_plotting_var(ds, variable, mask):
         freq_dict = {class_labels[v]: c for v, c in zip(values, counts)}
         print(freq_dict)
 
-    if ( variable == 'soiltexture' ):
+    elif ( variable == 'soiltexture' ):
        
         pct_clay = ds["PCT_CLAY"]
         pct_sand = ds["PCT_SAND"]
@@ -258,6 +258,20 @@ def select_plotting_var(ds, variable, mask):
         freq_dict = {f"{v:.2f}": c for v, c in zip(values, counts)}
         print(freq_dict)
 
+    else:
+        var = ds[variable]
+
+        ind_z = 0
+        ind_t = 0
+        # Reduce variable to first dimension
+        dims = var.ndim
+        if dims == 3:
+            var = var.isel({var.dims[0]: ind_t, var.dims[1]: ind_z})
+        elif dims == 2:
+            var = var.isel({var.dims[0]: ind_t})
+        else:
+            var = var
+        cmap_used = plt.get_cmap("turbo")
 
     return var, cmap_used
 
@@ -365,14 +379,16 @@ def plot_map(var, triang, mask, vlon_rot_min, vlon_rot_max, vlat_rot_min, vlat_r
     ax1.add_feature(cfeature.OCEAN, color='azure')
 #    ax1.set_title('ICON external parameters (EUR-12),\nplotting demo with icosahedral grid', fontsize=9)
     
-    if (variable=='pftnat'):
+    if (variable=='terrain'):
+        levelsVals = (np.arange(51) * 50)
+    elif (variable=='pftnat'):
         levelsVals = (np.arange(17+1))
     elif (variable=='pft'):
         levelsVals = (np.arange(21+1))
     elif (variable=='soiltexture'):
         levelsVals = np.arange(13)+1
     else:
-        levelsVals = (np.arange(51) * 50)
+        levelsVals = np.linspace(var.min().item(), var.max().item(), 50)
 
 #    print("Shape of triangles array:", triang.triangles.shape)
 #    print("Number of points in var:", len(var))
@@ -442,10 +458,15 @@ def main():
        gridPnFn = dirname+'/eclm/static/EUR-R13B05_189976_grid.nc'
 #       gridPnFn = '/p/project1/cslts/poll1/eclm_coupling/CTSM/eCLM_static-file-generator_regen/gen_domain_files/domain.lnd.EUR-R13B05_EUR-R13B05.251022.nc'
 #       gridPnFn = '/p/project1/cslts/poll1/eclm_coupling/CTSM/eCLM_static-file-generator_regen/mkmapgrids/EUR-R13B05_189976_grid.nc'
-    else:
+    elif (variable == 'terrain'):
        model = 'icon'
        dsPnFn = dirname+'/icon/static/external_parameter_icon_europe011_DOM01_tiles.nc'
        gridPnFn = dirname+'/icon/static/europe011_DOM01.nc'
+    else:
+       model = 'eclm2'
+       dsPnFn = dirname+'/eclm/static/surfdata_ICON-11_hist_16pfts_Irrig_CMIP6_simyr2000_c230302_gcvurb-pfsoil_halo.nc'
+       gridPnFn = '/p/project1/cslts/poll1/eclm_coupling/CTSM/eCLM_static-file-generator_regen/mkmapgrids/EUR-R13B05_189976_grid.nc'
+
     plotFn = f'./map_{model}_{variable}_EUR-12.pdf'
 
     ds, dsGrid = load_datasets(dsPnFn, gridPnFn)
